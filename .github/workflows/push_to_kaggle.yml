@@ -1,36 +1,70 @@
-# This is a basic workflow to help you get started with Actions
+
 
 name: CI
-
-# Controls when the workflow will run
 on:
-  # Triggers the workflow on push or pull request events but only for the "main" branch
   push:
     branches: [ "main" ]
-  pull_request:
-    branches: [ "main" ]
 
-  # Allows you to run this workflow manually from the Actions tab
   workflow_dispatch:
 
-# A workflow run is made up of one or more jobs that can run sequentially or in parallel
+  schedule:
+    - cron: "33 03 * * 6"
+    - cron: "33 03 * * 3"
+
+env:
+  DATASET_URL: maxisoft/binance-futures-stats
+
 jobs:
-  # This workflow contains a single job called "build"
-  build:
-    # The type of runner that the job will run on
+  push_kaggle:
+
     runs-on: ubuntu-latest
 
-    # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
-      # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
+
       - uses: actions/checkout@v3
+        with:
+          fetch-depth: 2
 
-      # Runs a single command using the runners shell
-      - name: Run a one-line script
-        run: echo Hello, world!
+      - name: Kaggle Login
+        timeout-minutes: 5
+        uses: osbm/kaggle-login@v2.3
+        with:
+          KAGGLE_USERNAME: maxisoft
+          KAGGLE_KEY: ${{ secrets.KAGGLE_KEY }}
 
-      # Runs a set of commands using the runners shell
-      - name: Run a multi-line script
+      - name: Download dataset metadata
+        timeout-minutes: 1
         run: |
-          echo Add other actions to build,
-          echo test, and deploy your project.
+          chmod 600 ~/.kaggle/kaggle.json
+          mkdir -p binancedumper
+          pushd binancedumper 
+          kaggle datasets metadata ${DATASET_URL}
+          popd
+          
+      - name: Download dataset
+        timeout-minutes: 90
+        run: |
+          mkdir -p downloading
+          pushd downloading
+          kaggle datasets download --unzip ${DATASET_URL}
+          pushd binancedumper
+          rm -f state.json || :
+          rm -f pairs.json || :
+          rm -rf markprice_*.csv || :
+          rm -rf btcusdt_depth20_*.csv || :
+          ls -lah
+          popd
+          popd
+          mv --no-clobber downloading/binancedumper/* binancedumper
+          rm -rf downloading
+
+      - name: LONG running binance-dumper via docker
+        timeout-minutes: 60
+        run: |
+          chown -R 1001 binancedumper
+          timeout --preserve-status --kill-after=1000 1600 docker run --rm -v `pwd`/binancedumper:/binancedumper ghcr.io/maxisoft/binance-dumper/binance-dumper:latest || :
+      
+      - name: Upload dataset
+        timeout-minutes: 90
+        run: |
+          kaggle datasets version -p binancedumper -r zip --delete-old-versions -m "update on ${EPOCHSECONDS}"

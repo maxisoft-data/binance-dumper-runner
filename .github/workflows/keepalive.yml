@@ -8,8 +8,8 @@ on:
   issues:
 
 jobs:
-  cronjob-based-github-action:
-    name: Cronjob based github action
+  keep_alive:
+    name: Keep alive github action
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
