@@ -1,0 +1,3 @@
+[submodule "binance-dumper"]
+	path = binance-dumper
+	url = https://github.com/maxisoft/binance-dumper
