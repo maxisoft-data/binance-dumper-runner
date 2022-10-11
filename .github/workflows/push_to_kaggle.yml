@@ -47,13 +47,13 @@ jobs:
           mkdir -p downloading
           pushd downloading
           kaggle datasets download --unzip ${DATASET_URL}
-          [-d "binancedumper"] && pushd binancedumper
+          [ -d "binancedumper" ] && pushd binancedumper
           rm -f state.json || :
           rm -f pairs.json || :
           rm -rf markprice_*.csv || :
           rm -rf btcusdt_depth20_*.csv || :
           ls -lah
-          [-d "../binancedumper"] && popd
+          [ -d "../binancedumper" ] && popd
           popd
           mv --no-clobber downloading/* binancedumper
           rm -rf downloading
