@@ -56,6 +56,12 @@ jobs:
           mv --no-clobber downloading/* binancedumper
           rm -rf downloading
 
+      - name: LONG running binance-dumper via docker (USA)
+        timeout-minutes: 60
+        run: |
+          chown -R 1001 binancedumper
+          timeout --preserve-status --kill-after=1000 1600 docker run --rm -e BINANCE_BASE_URL=https://fapi.binance.us -v `pwd`/binancedumper:/binancedumper ghcr.io/maxisoft/binance-dumper/binance-dumper:latest || :
+          
       - name: LONG running binance-dumper via docker
         timeout-minutes: 60
         run: |
